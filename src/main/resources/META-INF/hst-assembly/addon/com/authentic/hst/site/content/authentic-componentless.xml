@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd">
+
+    <bean class="org.hippoecm.hst.site.container.TypeDeterminedMethodInvokingFactoryBean">
+        <constructor-arg value="java.lang.Void"/>
+        <property name="targetObject">
+            <bean class="org.hippoecm.hst.site.container.TypeDeterminedMethodInvokingFactoryBean">
+                <constructor-arg value="org.hippoecm.hst.core.container.Pipeline"/>
+                <property name="targetObject" ref="org.hippoecm.hst.core.container.Pipelines"/>
+                <property name="targetMethod" value="getPipeline"/>
+                <property name="arguments" value="DefaultSitePipeline"/>
+            </bean>
+        </property>
+        <property name="targetMethod" value="addProcessingValve"/>
+        <property name="arguments">
+            <bean class="com.authentic.componentless.initialize.ComponentlessUpdateValve" init-method="initialize">
+                <property name="valveName" value="componentlessUpdateValve"/>
+                <!-- Componentless will need a context, and it should run after targeting to ensure we get correct values -->
+                <property name="afterValves" value="contextResolvingValve, targetingUpdateValve"/>
+                <property name="beforeValves" value="actionValve, resourceServingValve"/>
+            </bean>
+        </property>
+    </bean>
+
+    <bean class="org.hippoecm.hst.site.container.TypeDeterminedMethodInvokingFactoryBean">
+        <constructor-arg value="java.lang.Void"/>
+        <property name="targetObject">
+            <bean class="org.hippoecm.hst.site.container.TypeDeterminedMethodInvokingFactoryBean">
+                <constructor-arg value="org.hippoecm.hst.core.container.Pipeline"/>
+                <property name="targetObject" ref="org.hippoecm.hst.core.container.Pipelines"/>
+                <property name="targetMethod" value="getPipeline"/>
+                <property name="arguments" value="PageModelPipeline"/>
+            </bean>
+        </property>
+        <property name="targetMethod" value="addProcessingValve"/>
+        <property name="arguments">
+            <bean class="com.authentic.componentless.initialize.ComponentlessUpdateValve" init-method="initialize">
+                <property name="valveName" value="componentlessUpdateValve"/>
+                <!-- Componentless will need a context, and it should run after targeting to ensure we get correct values -->
+                <property name="afterValves" value="localizationValve, targetingUpdateValve"/>
+                <property name="beforeValves" value="componentRenderingValve"/>
+            </bean>
+        </property>
+    </bean>
+</beans>
