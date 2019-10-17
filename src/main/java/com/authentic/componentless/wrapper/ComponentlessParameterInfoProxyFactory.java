@@ -21,6 +21,7 @@ import static org.hippoecm.hst.util.HstRequestUtils.isComponentRenderingPreviewR
 
 public class ComponentlessParameterInfoProxyFactory extends HstParameterInfoProxyFactoryImpl implements HstParameterInfoProxyFactory {
     private static final Logger log = LoggerFactory.getLogger(ComponentlessParameterInfoProxyFactory.class);
+    private static final String COMPONENT_PARAMETER_MAP = "componentParameterMap";
 
     private HstParameterInfoProxyFactory zuper = null;
 
@@ -30,10 +31,13 @@ public class ComponentlessParameterInfoProxyFactory extends HstParameterInfoProx
 
         T paramInfoProxy = zuper.createParameterInfoProxy(parametersInfo, parameterConfiguration, request, converter);
         if (isComponentRenderingPreviewRequest(RequestContextProvider.get()) && (request instanceof HstRequest)) {
-            request.setAttribute("componentParameterMap", getCmsParameters(request, parameters));
-        } else {
+            Map<String, String> cmsParameters = getCmsParameters(request, parameters);
+            request.setAttribute(COMPONENT_PARAMETER_MAP, cmsParameters);
+            ((HstRequest) request).setModel(COMPONENT_PARAMETER_MAP, cmsParameters);
+        } else if (request instanceof HstRequest) {
             Map<String, String> targetedParameters = getTargetedParameters(request, parameterConfiguration, parameters);
-            request.setAttribute("componentParameterMap", targetedParameters);
+            request.setAttribute(COMPONENT_PARAMETER_MAP, targetedParameters);
+            ((HstRequest) request).setModel(COMPONENT_PARAMETER_MAP, targetedParameters);
         }
 
         // Call zuper instead of super, in case something else has already changed out the proxyfactory
