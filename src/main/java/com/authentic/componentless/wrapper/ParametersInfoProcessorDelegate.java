@@ -1,6 +1,7 @@
 package com.authentic.componentless.wrapper;
 
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import org.apache.commons.lang3.StringUtils;
 import org.hippoecm.hst.core.parameters.ParametersInfo;
 import org.hippoecm.hst.pagecomposer.jaxrs.api.PropertyRepresentationFactory;
 import org.hippoecm.hst.pagecomposer.jaxrs.model.ContainerItemComponentPropertyRepresentation;
@@ -35,12 +36,12 @@ public class ParametersInfoProcessorDelegate {
 				rtn = new ArrayList<>();
 			
 			//add the properties from our JcrConfig
-			addPropertiesFromJcrConfig(threadLocal.get(),rtn);
+			addPropertiesFromJcrConfig(threadLocal.get(), rtn, contentPath);
 			
 		} catch (Exception e) {
 			log.error("Error in getting properties for component", e);
 		}
-		
+
 		
 		threadLocal.set(null);
 		return rtn;
@@ -64,7 +65,7 @@ public class ParametersInfoProcessorDelegate {
 		return rtn;
 	}
 	
-	private static void addPropertiesFromJcrConfig(Node jcrItemNode, List<ContainerItemComponentPropertyRepresentation> properties) throws RepositoryException {
+	private static void addPropertiesFromJcrConfig(Node jcrItemNode, List<ContainerItemComponentPropertyRepresentation> properties, String contentPath) throws RepositoryException {
 		//groupLabel defines a new group
 		NodeIterator children = jcrItemNode.getNodes();
 
@@ -74,14 +75,14 @@ public class ParametersInfoProcessorDelegate {
 				if (!"hst:abstractcomponent".equalsIgnoreCase(child.getPrimaryNodeType().getName()))
 					continue;
 
-				addChildNodeProperties(child, properties);
+				addChildNodeProperties(child, properties, contentPath);
 			} catch (RepositoryException e) {
 				log.warn("Unable to add properties for child node", e);
 			}
 		}
 	}
 
-	private static void addChildNodeProperties(Node child, List<ContainerItemComponentPropertyRepresentation> properties) throws RepositoryException {
+	private static void addChildNodeProperties(Node child, List<ContainerItemComponentPropertyRepresentation> properties, String contentPath) throws RepositoryException {
 		PropertyIterator childProperties = child.getProperties();
 		ContainerItemComponentPropertyRepresentation newProperty = new ContainerItemComponentPropertyRepresentation();
 		ContainerItemComponentPropertyRepresentation oldProperty = newProperty;
@@ -107,6 +108,13 @@ public class ParametersInfoProcessorDelegate {
 			field.setAccessible(true);
 
 			configureFieldProperty(field, prop, oldProperty, newProperty);
+		}
+
+		if (!StringUtils.isEmpty(newProperty.getPickerInitialPath())) {
+			if (StringUtils.isEmpty(newProperty.getPickerRootPath()))
+				newProperty.setPickerRootPath(contentPath);
+			if (StringUtils.isEmpty(oldProperty.getPickerRootPath()))
+				oldProperty.setPickerRootPath(contentPath);
 		}
 
 		if (oldPropertyIndex == -1){
