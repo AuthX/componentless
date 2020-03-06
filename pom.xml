@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.authentic</groupId>
 	<artifactId>authentic-componentless</artifactId>
-	<version>3.0.1</version>
+	<version>3.0.3</version>
 	<name>authentic componentless project</name>
 	<description>Project to allow bloomreach to run with the JCR only. v13</description>
 	<packaging>jar</packaging>

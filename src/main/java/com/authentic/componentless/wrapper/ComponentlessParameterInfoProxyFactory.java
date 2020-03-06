@@ -1,5 +1,6 @@
 package com.authentic.componentless.wrapper;
 
+import org.apache.commons.io.IOUtils;
 import org.hippoecm.hst.container.RequestContextProvider;
 import org.hippoecm.hst.core.component.HstParameterInfoProxyFactory;
 import org.hippoecm.hst.core.component.HstParameterInfoProxyFactoryImpl;
@@ -12,8 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URLDecoder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,6 +35,9 @@ public class ComponentlessParameterInfoProxyFactory extends HstParameterInfoProx
         Map<String, String> parameters = parameterConfiguration.getParameters(RequestContextProvider.get().getResolvedSiteMapItem());
 
         T paramInfoProxy = zuper.createParameterInfoProxy(parametersInfo, parameterConfiguration, request, converter);
+        if (request.getAttribute(COMPONENT_PARAMETER_MAP) != null) {
+            return paramInfoProxy;
+        }
         if (isComponentRenderingPreviewRequest(RequestContextProvider.get()) && (request instanceof HstRequest)) {
             Map<String, String> cmsParameters = getCmsParameters(request, parameters);
             request.setAttribute(COMPONENT_PARAMETER_MAP, cmsParameters);
@@ -47,7 +55,8 @@ public class ComponentlessParameterInfoProxyFactory extends HstParameterInfoProx
     private Map<String, String> getCmsParameters(HttpServletRequest request, Map<String, String> parameters) {
         // getParameterMap() and getParameterMap("") are not the same thing
         Map<String, String[]> parameterMap = ((HstRequest) request).getParameterMap("");
-        HashMap<String, String> cmsParameters = new HashMap<>();
+        HashMap<String, String> cmsParameters = new HashMap<>(parameters);
+        HashMap<String, String> liveUpdateParameters = getLiveUpdateParameters(request);
 
         // Take the parameters the CMS set for us and put them in our return value only if they are supposed to exist
         parameters.forEach((key, value) -> {
@@ -65,7 +74,39 @@ public class ComponentlessParameterInfoProxyFactory extends HstParameterInfoProx
             cmsParameters.put(key, strVal);
         });
 
+        cmsParameters.putAll(liveUpdateParameters);
+
         return cmsParameters;
+    }
+
+    // When doing live updates in the channel manager, parameters are POSTed, this parses those
+    private HashMap<String, String> getLiveUpdateParameters(HttpServletRequest request) {
+        final HashMap<String, String> postedParameters = new HashMap<>();
+        try {
+            final String characterEncoding = request.getCharacterEncoding();
+            final String requestBody = IOUtils.toString(request.getInputStream(), characterEncoding);
+            final String[] requestParams = requestBody.split("&");
+
+            Arrays.stream(requestParams).forEach(param -> {
+                final String[] keyValuePair = param.split("=", 2);
+                if (keyValuePair.length < 2) {
+                    return;
+                }
+
+                try {
+                    postedParameters.put(
+                            URLDecoder.decode(keyValuePair[0], characterEncoding),
+                            URLDecoder.decode(keyValuePair[1], characterEncoding)
+                    );
+                } catch (UnsupportedEncodingException e) {
+                    log.warn("Problem parsing a posted parameter from the CMS", e);
+                }
+            });
+        } catch (IOException e) {
+            log.warn("Problem parsing a POST request body from the CMS", e);
+        }
+
+        return postedParameters;
     }
 
     private Map<String, String> getTargetedParameters(HttpServletRequest request, ParameterConfiguration parameterConfiguration, Map<String, String> parameters) {
